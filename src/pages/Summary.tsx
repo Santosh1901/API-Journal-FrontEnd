@@ -5,6 +5,8 @@ import Loading from '../components/Loading'
 import { useToast } from '../components/Toaster'
 import EntryCard from '../components/EntryCard'
 import EntryModal from '../components/EntryModal'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { deleteEntry } from '../services/api'
 
 // Local JSX declaration for environments that don't resolve @types/react.
 // This is defensive and temporary — the long-term fix is to install `@types/react`.
@@ -23,6 +25,7 @@ export default function Summary(){
 
   const [activeEntry, setActiveEntry] = React.useState<any|null>(null)
   const [modalOpen, setModalOpen] = React.useState(false)
+  const [deleteCandidate, setDeleteCandidate] = React.useState<any|null>(null)
 
   const { show } = useToast()
 
@@ -80,7 +83,7 @@ export default function Summary(){
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                 {today.entries.slice(0,6).map((e:any)=> (
                   <div key={e.id} onClick={()=>{ setActiveEntry(e); setModalOpen(true) }}>
-                    <EntryCard entry={e} />
+                    <EntryCard entry={e} onDelete={(ent)=> setDeleteCandidate(ent)} />
                   </div>
                 ))}
               </div>
@@ -93,7 +96,19 @@ export default function Summary(){
         <div className="bg-white p-6 rounded shadow">No summary available for today.</div>
       )}
 
-      <EntryModal entry={activeEntry} open={modalOpen} onClose={()=>{ setModalOpen(false); setActiveEntry(null) }} />
+      <EntryModal entry={activeEntry} open={modalOpen} onClose={()=>{ setModalOpen(false); setActiveEntry(null) }} onDelete={(ent: any)=> setDeleteCandidate(ent)} />
+
+      <ConfirmDialog open={Boolean(deleteCandidate)} title="Delete entry" description="Are you sure you want to delete this entry? This cannot be undone." onCancel={()=> setDeleteCandidate(null) } onConfirm={async ()=>{
+        if(!deleteCandidate) return
+        try{
+          await deleteEntry(deleteCandidate.id)
+          if(today) setToday({...today, entries: today.entries.filter((x:any)=> x.id !== deleteCandidate.id)})
+          if(activeEntry && activeEntry.id === deleteCandidate.id) { setActiveEntry(null); setModalOpen(false) }
+          show({ type: 'success', message: 'Entry deleted' })
+        }catch(err:any){
+          show({ type: 'error', message: err?.message || 'Failed to delete entry' })
+        } finally { setDeleteCandidate(null) }
+      }} />
 
       {tab==='weekly' && weekly && (
         <div className="bg-white p-6 rounded shadow space-y-2">

@@ -2,10 +2,12 @@ import React from 'react'
 import { getEntries } from '../services/api'
 import EntryCard from '../components/EntryCard'
 import EntryModal from '../components/EntryModal'
+import ConfirmDialog from '../components/ConfirmDialog'
 import Loading from '../components/Loading'
 import EmptyState from '../components/EmptyState'
 import SkeletonCard from '../components/SkeletonCard'
 import { useToast } from '../components/Toaster'
+import { deleteEntry } from '../services/api'
 import type { Entry } from '../types'
 
 export default function Entries(){
@@ -13,6 +15,7 @@ export default function Entries(){
   const [error, setError] = React.useState<string|undefined>(undefined)
   const [activeEntry, setActiveEntry] = React.useState<Entry|null>(null)
   const [modalOpen, setModalOpen] = React.useState(false)
+  const [deleteCandidate, setDeleteCandidate] = React.useState<Entry|null>(null)
   const { show } = useToast()
 
   React.useEffect(()=>{
@@ -73,13 +76,24 @@ export default function Entries(){
         <>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             {entries.map((e: Entry)=> (
-              <EntryCard key={e.id} entry={e} onClick={(ent)=>{ setActiveEntry(ent); setModalOpen(true) }} />
+              <EntryCard key={e.id} entry={e} onClick={(ent)=>{ setActiveEntry(ent); setModalOpen(true) }} onDelete={(ent)=> setDeleteCandidate(ent)} />
             ))}
           </div>
         </>
       )}
 
-      <EntryModal entry={activeEntry} open={modalOpen} onClose={()=>{ setModalOpen(false); setActiveEntry(null) }} />
+      <EntryModal entry={activeEntry} open={modalOpen} onClose={()=>{ setModalOpen(false); setActiveEntry(null) }} onDelete={(ent: Entry)=> setDeleteCandidate(ent)} />
+
+      <ConfirmDialog open={Boolean(deleteCandidate)} title="Delete entry" description="Are you sure you want to delete this entry? This cannot be undone." onCancel={()=> setDeleteCandidate(null) } onConfirm={async ()=>{
+        if(!deleteCandidate) return
+        try{
+          await deleteEntry(deleteCandidate.id)
+          setEntries((prev)=> prev ? prev.filter(x=> x.id !== deleteCandidate.id) : [])
+          show({ type: 'success', message: 'Entry deleted' })
+        }catch(err:any){
+          show({ type: 'error', message: err?.message || 'Failed to delete entry' })
+        } finally { setDeleteCandidate(null) }
+      }} />
     </div>
   )
 }

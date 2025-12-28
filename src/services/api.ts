@@ -90,7 +90,14 @@ export async function createEntry(payload: { text: string, timestamp?: string, t
     if (data && data.entry) return data.entry
     return data
   })
-} 
+}
+
+export async function deleteEntry(id: number | string): Promise<void> {
+  return safeGet<void>(async () => {
+    await client.delete(`/api/entries/${id}`)
+    return
+  })
+}
 
 // Health endpoint
 export async function getHealth(): Promise<{ok: boolean; info?: any}> {
