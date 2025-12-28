@@ -1,0 +1,1 @@
+// Removed: replaced by official JSX types provided by @types/react
